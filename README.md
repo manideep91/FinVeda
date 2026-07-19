@@ -23,6 +23,13 @@ from basic scripting to true agentic AI.
 
 📁 [Go to Phase 1](./phase1)
 
+**Run:**
+
+```bash
+cd phase1
+uv run python main.py
+```
+
 ---
 
 ### ✅ Phase 2 — LangGraph Concepts (State, Nodes, Edges)
@@ -38,9 +45,16 @@ from basic scripting to true agentic AI.
 
 📁 [Go to Phase 2](./phase2)
 
+**Run:**
+
+```bash
+cd phase2
+uv run python main.py
+```
+
 ---
 
-### 🔜 Phase 3 — True Agentic AI (ReAct + ToolNode)
+### ✅ Phase 3 — True Agentic AI (ReAct + ToolNode)
 
 > **Concept: LLM drives the flow, not the developer**
 
@@ -51,29 +65,58 @@ from basic scripting to true agentic AI.
 
 ✅ First truly agentic phase — LLM is in control.
 
-📁 [Go to Phase 3](./phase3) ← 🚧 In progress
+📁 [Go to Phase 3](./phase3)
+
+**Run:**
+
+```bash
+cd phase3
+uv run python main.py
+```
 
 ---
 
-### 🔜 Phase 4 — Memory + Ledger (Persistence)
+### ✅ Phase 4 — Full Stack App (FastAPI + Angular + Kite Integration)
 
-> **Concept: Agent remembers across runs**
+> **Concept: Production-grade agentic AI with real portfolio data**
 
-- Persistent state across sessions
-- Portfolio tracking with SQLite
-- Agent recalls past recommendations and adjusts
+- FastAPI backend with Kite/Zerodha OAuth integration
+- Fetches real portfolio holdings from Zerodha
+- Loops each stock through Phase 3 ReAct AI agent
+- Angular 20 dashboard — select stocks, analyse on demand
+- Live BUY/SELL/HOLD recommendations with confidence score
+- Daily scheduler + WhatsApp notification (UI ready, backend coming soon)
 
-📁 [Go to Phase 4](./phase4) ← Coming soon
+✅ Consumer-facing app — real broker data + real AI analysis.
+
+📁 [Go to Phase 4](./phase4)
+
+**Run Backend:**
+
+```bash
+cd phase4
+uv run uvicorn backend.main:app --reload --port 8000
+```
+
+**Run Frontend** (in a separate terminal):
+
+```bash
+cd phase4/frontend
+ng serve
+```
+
+**Open:** http://localhost:4200
 
 ---
 
-### 🔜 Phase 5 — Scheduling + MCP (Autonomous Ops)
+### 🔜 Phase 5 — WhatsApp + Scheduler (Autonomous Ops)
 
-> **Concept: Agent runs itself**
+> **Concept: Agent runs itself and notifies you**
 
-- APScheduler for local scheduling
-- 7:30 AM IST daily analysis
-- MCP integration for autonomous operations
+- APScheduler for daily analysis at 7:30 AM IST
+- WhatsApp integration via Twilio/WhatsApp Business API
+- Runs every business day automatically
+- Sends portfolio summary with BUY/SELL/HOLD per stock
 
 📁 [Go to Phase 5](./phase5) ← Coming soon
 
@@ -81,18 +124,48 @@ from basic scripting to true agentic AI.
 
 ## 🛠️ Tech Stack
 
-| Tool                         | Purpose                    |
-| ---------------------------- | -------------------------- |
-| Python + uv                  | Language + package manager |
-| LangChain                    | LLM abstraction layer      |
-| LangGraph                    | Agent graph framework      |
-| Gemini 2.5 Flash (Vertex AI) | LLM via GCP                |
-| Yahoo Finance (`yfinance`)   | Stock price + fundamentals |
-| NewsAPI                      | Company news headlines     |
+| Tool                              | Purpose                           |
+| --------------------------------- | --------------------------------- |
+| Python + uv                       | Language + package manager        |
+| LangChain                         | LLM abstraction layer             |
+| LangGraph                         | Agent graph framework             |
+| Gemini 2.5 Flash Lite (Vertex AI) | LLM via GCP                       |
+| Yahoo Finance (`yfinance`)        | Stock price + fundamentals        |
+| NewsAPI                           | Company news headlines            |
+| FastAPI + uvicorn                 | Backend REST API                  |
+| Kite Connect (Zerodha)            | Real portfolio holdings via OAuth |
+| Angular 20                        | Frontend dashboard                |
+
+---
+
+## ⚙️ Setup
+
+**1. Clone the repo:**
+
+```bash
+git clone https://github.com/manideep91/FinVeda.git
+cd FinVeda
+```
+
+**2. Create root `.env`:**
+GOOGLE_CLOUD_PROJECT=your_gcp_project
+NEWS_API_KEY=your_newsapi_key
+LLM_PROVIDER=gemini
+LLM_MODEL=gemini-2.5-flash-lite
+KITE_API_KEY=your_kite_api_key
+KITE_API_SECRET=your_kite_api_secret
+
+**3. Each phase has its own virtual environment:**
+
+```bash
+cd phase1  # or phase2, phase3, phase4
+uv sync    # installs dependencies
+```
 
 ---
 
 ## 🚀 Long Term Goal
 
 FinVeda is being built toward a **consumer-facing app/website**
-for individual investors — real-time stock analysis powered by AI.
+for individual investors — real-time AI stock analysis powered by
+Gemini, connected directly to your broker portfolio.
