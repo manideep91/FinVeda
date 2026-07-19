@@ -1,0 +1,307 @@
+<h2 class="sr-only">FinVeda portfolio dashboard</h2>
+
+<div class="shell" *ngIf="!loading; else loadingTpl">
+  <!-- LEFT SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>📈 Portfolio</h2>
+      <p>{{ holdings.length }} holdings · {{ analysedHoldings.length }} analysed</p>
+    </div>
+
+    <!-- ACTION BAR -->
+    <div class="actions-bar">
+      <button class="btn-sm" (click)="selectAll()">Select all</button>
+      <button class="btn-sm" (click)="clearSelection()">Clear</button>
+      <button
+        class="btn-sm accent"
+        [disabled]="selectedCount === 0 || isAnalysing"
+        (click)="analyseSelected()"
+      >
+        Analyse {{ selectedCount > 0 ? '(' + selectedCount + ')' : '' }} ↗
+      </button>
+    </div>
+
+    <div class="stock-list">
+      <!-- ANALYSED SECTION -->
+      <ng-container *ngIf="analysedHoldings.length > 0 || errorHoldings.length > 0">
+        <div class="section-title">
+          Analysed · {{ analysedHoldings.length + errorHoldings.length }}
+        </div>
+
+        <!-- Successfully analysed -->
+        <div
+          class="stock-card"
+          *ngFor="let h of analysedHoldings"
+          [class.active]="selectedHolding?.ticker === h.ticker"
+          (click)="selectHolding(h)"
+        >
+          <div class="stock-info">
+            <div class="stock-top">
+              <span class="stock-name">{{ getShortName(h.ticker) }}</span>
+              <span class="badge" [ngClass]="getBadgeClass(h.recommendation)">
+                {{ h.recommendation || '...' }}
+              </span>
+            </div>
+            <div class="stock-bottom">
+              <span [ngClass]="getPnlClass(h.pnl)">
+                {{ h.pnl >= 0 ? '+' : '' }}₹{{ h.pnl | number: '1.0-0' }}
+              </span>
+              <span class="stock-qty">{{ h.quantity }} qty</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Failed stocks -->
+        <div
+          class="stock-card"
+          *ngFor="let h of errorHoldings"
+          [class.active]="selectedHolding?.ticker === h.ticker"
+          (click)="selectHolding(h)"
+        >
+          <div class="stock-info">
+            <div class="stock-top">
+              <span class="stock-name">{{ getShortName(h.ticker) }}</span>
+              <span class="badge badge-error">Fetch Failed</span>
+            </div>
+            <div class="stock-bottom">
+              <span [ngClass]="getPnlClass(h.pnl)">
+                {{ h.pnl >= 0 ? '+' : '' }}₹{{ h.pnl | number: '1.0-0' }}
+              </span>
+              <span class="stock-qty">{{ h.quantity }} qty</span>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- ANALYSING SECTION -->
+      <ng-container *ngIf="analysingHoldings.length > 0">
+        <div class="section-title">Analysing · {{ analysingHoldings.length }}</div>
+        <div class="stock-card" *ngFor="let h of analysingHoldings">
+          <div class="stock-info">
+            <div class="stock-top">
+              <span class="stock-name">{{ getShortName(h.ticker) }}</span>
+              <span class="badge badge-loading">Analysing...</span>
+            </div>
+            <div class="stock-bottom">
+              <span [ngClass]="getPnlClass(h.pnl)">
+                {{ h.pnl >= 0 ? '+' : '' }}₹{{ h.pnl | number: '1.0-0' }}
+              </span>
+              <span class="stock-qty">{{ h.quantity }} qty</span>
+            </div>
+          </div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+      </ng-container>
+
+      <!-- NOT ANALYSED SECTION -->
+      <ng-container *ngIf="notAnalysedHoldings.length > 0">
+        <div
+          class="divider"
+          *ngIf="
+            analysedHoldings.length > 0 || errorHoldings.length > 0 || analysingHoldings.length > 0
+          "
+        ></div>
+        <div class="section-title">Not analysed · {{ notAnalysedHoldings.length }}</div>
+
+        <div
+          class="stock-card"
+          *ngFor="let h of notAnalysedHoldings"
+          [class.selected]="h.selected"
+          (click)="toggleSelect(h)"
+        >
+          <input
+            type="checkbox"
+            [checked]="h.selected"
+            (click)="$event.stopPropagation()"
+            (change)="toggleSelect(h)"
+          />
+          <div class="stock-info">
+            <div class="stock-top">
+              <span class="stock-name">{{ getShortName(h.ticker) }}</span>
+              <span class="badge badge-pending">Not analysed</span>
+            </div>
+            <div class="stock-bottom">
+              <span [ngClass]="getPnlClass(h.pnl)">
+                {{ h.pnl >= 0 ? '+' : '' }}₹{{ h.pnl | number: '1.0-0' }}
+              </span>
+              <span class="stock-qty">{{ h.quantity }} qty</span>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">
+          {{ selectedHolding ? getShortName(selectedHolding.ticker) : 'Select a stock' }}
+        </div>
+        <div class="topbar-sub">
+          {{
+            selectedHolding ? 'Last analysed · just now' : 'Click an analysed stock to view details'
+          }}
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px">
+        <span class="user-name">{{ userName }}</span>
+        <button class="btn-sm" (click)="logout()">Logout</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- EMPTY STATE — nothing selected -->
+      <div class="empty-state" *ngIf="!selectedHolding">
+        <i class="ti ti-chart-bar"></i>
+        <p>Select stocks from the sidebar and click Analyse to get AI recommendations</p>
+      </div>
+
+      <!-- SELECTED HOLDING PANEL -->
+      <ng-container *ngIf="selectedHolding">
+        <!-- METRICS — always show regardless of error -->
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric-label">Current price</div>
+            <div class="metric-value">₹{{ selectedHolding.current_price | number: '1.0-2' }}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Unrealised P&L</div>
+            <div class="metric-value" [ngClass]="getPnlClass(selectedHolding.pnl)">
+              {{ selectedHolding.pnl >= 0 ? '+' : '' }}₹{{ selectedHolding.pnl | number: '1.0-0' }}
+            </div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Avg buy price</div>
+            <div class="metric-value">₹{{ selectedHolding.avg_price | number: '1.0-2' }}</div>
+          </div>
+        </div>
+
+        <!-- FETCH FAILED STATE -->
+        <div class="error-card" *ngIf="selectedHolding.status === 'error'">
+          <div class="error-icon">⚠️</div>
+          <div class="error-title">Fetch Failed — {{ getShortName(selectedHolding.ticker) }}</div>
+          <div class="error-reason">
+            {{ selectedHolding.error_message || 'Unknown error occurred.' }}
+          </div>
+          <div class="error-tip">
+            This stock may not be listed on NSE or uses a different ticker format. Try checking
+            Yahoo Finance for the correct symbol.
+          </div>
+        </div>
+
+        <!-- SUCCESS STATE — AI analysis -->
+        <ng-container *ngIf="selectedHolding.status === 'analysed'">
+          <div class="analysis-card">
+            <div class="analysis-header">
+              <div>
+                <div class="analysis-title">AI analysis</div>
+                <div class="analysis-sub">Powered by Gemini · ReAct agent</div>
+              </div>
+              <span class="rec-badge" [ngClass]="getBadgeClass(selectedHolding.recommendation)">
+                {{ selectedHolding.recommendation || 'Pending' }}
+              </span>
+            </div>
+
+            <div class="slabel">Technical summary</div>
+            <p class="summary-text">{{ selectedHolding.technical_summary || 'No data' }}</p>
+
+            <div class="slabel">News sentiment</div>
+            <p class="summary-text">{{ selectedHolding.news_sentiment || 'No data' }}</p>
+
+            <div class="slabel">Key risks</div>
+            <div class="risks">{{ selectedHolding.key_risks || 'No risks identified' }}</div>
+
+            <div class="slabel" style="margin-top: 16px">Confidence score</div>
+            <div class="conf-row">
+              <div class="circle-wrap">
+                <svg width="72" height="72" viewBox="0 0 72 72">
+                  <circle class="circle-bg" cx="36" cy="36" r="30" />
+                  <circle
+                    class="circle-fill"
+                    cx="36"
+                    cy="36"
+                    r="30"
+                    [attr.stroke]="getConfidenceColor(selectedHolding)"
+                    stroke-dasharray="188.5"
+                    [attr.stroke-dashoffset]="getStrokeDashoffset(selectedHolding)"
+                  />
+                </svg>
+                <div class="circle-text">
+                  <span class="circle-num">{{ getConfidenceNumber(selectedHolding) }}</span>
+                  <span class="circle-denom">/ 10</span>
+                </div>
+              </div>
+              <div class="conf-detail">
+                <div class="conf-label">{{ getConfidenceLabel(selectedHolding) }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SCHEDULER CARD -->
+          <div class="scheduler-card">
+            <div class="scheduler-title">Daily scheduler</div>
+
+            <div class="scheduler-row">
+              <div>
+                <div class="scheduler-label">Enable daily analysis</div>
+                <div class="scheduler-sub">Runs every business day at 7:30 AM IST</div>
+              </div>
+              <div
+                class="toggle"
+                [class.on]="schedulerEnabled"
+                (click)="schedulerEnabled = !schedulerEnabled"
+              >
+                <div class="toggle-thumb"></div>
+              </div>
+            </div>
+
+            <div class="scheduler-row">
+              <div>
+                <div class="scheduler-label">WhatsApp notification</div>
+                <div class="scheduler-sub">Send daily summary via WhatsApp</div>
+              </div>
+              <div
+                class="toggle"
+                [class.on]="whatsappEnabled"
+                (click)="whatsappEnabled = !whatsappEnabled"
+              >
+                <div class="toggle-thumb"></div>
+              </div>
+            </div>
+
+            <div class="scheduler-row">
+              <div>
+                <div class="scheduler-label">Analyse all holdings</div>
+                <div class="scheduler-sub">
+                  Include all {{ holdings.length }} stocks in daily run
+                </div>
+              </div>
+              <div
+                class="toggle"
+                [class.on]="analyseAllEnabled"
+                (click)="analyseAllEnabled = !analyseAllEnabled"
+              >
+                <div class="toggle-thumb"></div>
+              </div>
+            </div>
+
+            <div class="coming-soon" *ngIf="schedulerEnabled || whatsappEnabled">
+              <i class="ti ti-clock" aria-hidden="true"></i>
+              Backend integration coming soon
+            </div>
+          </div>
+        </ng-container>
+      </ng-container>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING STATE -->
+<ng-template #loadingTpl>
+  <div class="loading-screen">
+    <div class="loading-text">Fetching your portfolio...</div>
+    <div class="loading-sub">Connecting to Zerodha</div>
+  </div>
+</ng-template>

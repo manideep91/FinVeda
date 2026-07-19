@@ -10,52 +10,71 @@ router = APIRouter(prefix="/analysis", tags=["Analysis"])
 kite = KiteConnect(api_key=os.getenv("KITE_API_KEY"))
 
 @router.get("/portfolio")
-def analyse_portfolio(access_token: str, limit: int = 5):
+def get_portfolio(access_token: str):
     """
-    Fetches ALL holdings from Kite but analyses
-    only first `limit` stocks through AI agent.
-    Default limit is 5 to save LLM tokens.
+    Fetches ALL holdings from Kite.
+    No AI analysis — just raw holdings for sidebar.
+    Analysis happens on demand via /analysis/stock.
+
+    Java analogy: @GetMapping("/portfolio") that just
+    calls a Feign client and maps to DTO — no business logic.
     """
     try:
         kite.set_access_token(access_token)
-        
-        # Step 1: Fetch ALL holdings from Kite
         all_holdings = kite.holdings()
 
         if not all_holdings:
-            return {"message": "No holdings found", "results": []}
-
-        print(f"📊 Total holdings in portfolio: {len(all_holdings)}")
-        print(f"🤖 Will analyse first {limit} stocks via AI")
-
-        # Step 2: Pass only first `limit` to AI agent
-        # Fetch all from Zerodha, limit LLM calls
-        holdings_to_analyse = all_holdings[:limit]
-
-        results = []
-        for holding in holdings_to_analyse:
-            ticker = holding["tradingsymbol"] + ".NS"
-            print(f"🤖 Analysing {ticker}...")
-
-            try:
-                analysis = analyse_stock(ticker)
-                analysis["quantity"] = holding["quantity"]
-                analysis["avg_price"] = holding["average_price"]
-                analysis["current_price"] = holding["last_price"]
-                analysis["pnl"] = holding["pnl"]
-                results.append(analysis)
-
-            except Exception as e:
-                results.append({
-                    "ticker": ticker,
-                    "error": str(e)
-                })
+            return {"total_holdings": 0, "holdings": []}
 
         return {
-            "total_holdings": len(all_holdings),   # all from Zerodha
-            "analysed": len(results),               # LLM analysed
-            "results": results
+            "total_holdings": len(all_holdings),
+            "holdings": [
+                {
+                    "ticker": h["tradingsymbol"] + ".NS",
+                    "quantity": h["quantity"],
+                    "avg_price": h["average_price"],
+                    "current_price": h["last_price"],
+                    "pnl": h["pnl"]
+                }
+                for h in all_holdings
+            ]
         }
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+
+@router.get("/stock")
+def analyse_single_stock(ticker: str, access_token: str):
+    try:
+        kite.set_access_token(access_token)
+        print(f"🤖 Analysing single stock: {ticker}")
+        analysis = analyse_stock(ticker)
+
+        # Check if analysis actually returned useful data
+        # If all key fields are None — treat as error
+        if not analysis.get("recommendation") and not analysis.get("technical_summary"):
+            return {
+                "ticker": ticker,
+                "status": "error",
+                "error_message": f"Could not fetch data for '{ticker}'. This stock may not be listed on NSE or Yahoo Finance does not have data for it."
+            }
+
+        return {
+            "ticker": ticker,
+            "status": "success",
+            "recommendation": analysis.get("recommendation"),
+            "confidence": analysis.get("confidence"),
+            "technical_summary": analysis.get("technical_summary"),
+            "news_sentiment": analysis.get("news_sentiment"),
+            "key_risks": analysis.get("key_risks"),
+        }
+
+    except Exception as e:
+        error_msg = str(e)
+        print(f"❌ Failed to analyse {ticker}: {error_msg}")
+        return {
+            "ticker": ticker,
+            "status": "error",
+            "error_message": error_msg[:200]
+        }
