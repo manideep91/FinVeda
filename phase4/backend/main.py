@@ -28,7 +28,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:4200",      # local dev
-        "https://*.vercel.app",       # Vercel deployment
+        "https://fin-veda-ten.vercel.app",       # Vercel deployment
     ],
     allow_credentials=True,
     allow_methods=["*"],
