@@ -10,15 +10,20 @@
 
     <!-- ACTION BAR -->
     <div class="actions-bar">
-      <button class="btn-sm" (click)="selectAll()">Select all</button>
-      <button class="btn-sm" (click)="clearSelection()">Clear</button>
-      <button
-        class="btn-sm accent"
-        [disabled]="selectedCount === 0 || isAnalysing"
-        (click)="analyseSelected()"
-      >
-        Analyse {{ selectedCount > 0 ? '(' + selectedCount + ')' : '' }} ↗
-      </button>
+      <ng-container *ngIf="analysisEnabled">
+        <button class="btn-sm" (click)="selectAll()">Select all</button>
+        <button class="btn-sm" (click)="clearSelection()">Clear</button>
+        <button
+          class="btn-sm accent"
+          [disabled]="selectedCount === 0 || isAnalysing"
+          (click)="analyseSelected()"
+        >
+          Analyse {{ selectedCount > 0 ? '(' + selectedCount + ')' : '' }} ↗
+        </button>
+      </ng-container>
+
+      <!-- Show when analysis is disabled -->
+      <div class="disabled-banner" *ngIf="!analysisEnabled">🔒 {{ analysisDisabledMessage }}</div>
     </div>
 
     <div class="stock-list">

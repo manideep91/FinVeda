@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-callback',
@@ -25,7 +26,7 @@ export class Callback implements OnInit {
     }
 
     // Exchange request_token for access_token via FastAPI
-    fetch(`http://127.0.0.1:8000/auth/callback?request_token=${requestToken}`)
+    fetch(`${environment.apiUrl}/auth/callback?request_token=${requestToken}`)
       .then((res) => res.json())
       .then((data) => {
         // Store access_token in localStorage

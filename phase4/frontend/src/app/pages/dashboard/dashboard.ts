@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 
 interface Holding {
   ticker: string;
@@ -37,6 +38,8 @@ export class Dashboard implements OnInit {
   schedulerEnabled = false;
   whatsappEnabled = false;
   analyseAllEnabled = false;
+  analysisEnabled = true;
+  analysisDisabledMessage = '';
 
   constructor(private router: Router) {}
 
@@ -55,10 +58,18 @@ export class Dashboard implements OnInit {
   loadHoldings() {
     this.loading = true;
 
-    fetch(`http://127.0.0.1:8000/portfolio/holdings?access_token=${this.accessToken}`)
+    // First check if analysis is enabled
+    fetch(`${environment.apiUrl}/app/status`)
+      .then((res) => res.json())
+      .then((status) => {
+        this.analysisEnabled = status.analysis_enabled;
+        this.analysisDisabledMessage = status.message;
+
+        // Then load holdings regardless of flag
+        return fetch(`${environment.apiUrl}/portfolio/holdings?access_token=${this.accessToken}`);
+      })
       .then((res) => res.json())
       .then((data) => {
-        console.log('Holdings loaded:', data);
         this.holdings = data.holdings.map((h: any) => ({
           ...h,
           selected: false,
@@ -69,7 +80,6 @@ export class Dashboard implements OnInit {
       .catch((err) => {
         this.error = 'Failed to load portfolio.';
         this.loading = false;
-        console.error(err);
       });
   }
 
@@ -119,7 +129,7 @@ export class Dashboard implements OnInit {
 
       try {
         const res = await fetch(
-          `http://127.0.0.1:8000/analysis/stock?ticker=${holding.ticker}&access_token=${this.accessToken}`,
+          `${environment.apiUrl}/analysis/stock?ticker=${holding.ticker}&access_token=${this.accessToken}`,
         );
         const data = await res.json();
         console.log(`📦 ${holding.ticker}:`, data);

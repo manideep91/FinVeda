@@ -573,3 +573,13 @@
   background: #fed7d7;
   color: #9b2c2c;
 }
+.disabled-banner {
+  font-size: 12px;
+  color: #975a16;
+  background: #fefcbf;
+  border: 1px solid #f6e05e;
+  border-radius: 6px;
+  padding: 6px 10px;
+  width: 100%;
+  text-align: center;
+}

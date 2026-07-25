@@ -9,15 +9,19 @@ load_dotenv()
 router = APIRouter(prefix="/analysis", tags=["Analysis"])
 kite = KiteConnect(api_key=os.getenv("KITE_API_KEY"))
 
+def is_analysis_enabled() -> bool:
+    """
+    Checks APP_ENABLED flag.
+    Java analogy: @ConditionalOnProperty check before
+    executing expensive service method.
+    """
+    return os.getenv("APP_ENABLED", "true").lower() == "true"
+
 @router.get("/portfolio")
 def get_portfolio(access_token: str):
     """
-    Fetches ALL holdings from Kite.
-    No AI analysis — just raw holdings for sidebar.
-    Analysis happens on demand via /analysis/stock.
-
-    Java analogy: @GetMapping("/portfolio") that just
-    calls a Feign client and maps to DTO — no business logic.
+    Fetches ALL holdings — always allowed regardless of flag.
+    No LLM calls here — just Kite API.
     """
     try:
         kite.set_access_token(access_token)
@@ -42,22 +46,34 @@ def get_portfolio(access_token: str):
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-    
 
 @router.get("/stock")
 def analyse_single_stock(ticker: str, access_token: str):
+    """
+    Analyses a single stock via AI agent.
+    GATED by APP_ENABLED flag — returns friendly error if disabled.
+    Java analogy: @PreAuthorize checking a feature flag
+    before executing business logic.
+    """
+
+    # ← Gate check — block LLM calls if flag is off
+    if not is_analysis_enabled():
+        return {
+            "ticker": ticker,
+            "status": "disabled",
+            "error_message": "AI analysis is currently disabled. Please try again later."
+        }
+
     try:
         kite.set_access_token(access_token)
         print(f"🤖 Analysing single stock: {ticker}")
         analysis = analyse_stock(ticker)
 
-        # Check if analysis actually returned useful data
-        # If all key fields are None — treat as error
         if not analysis.get("recommendation") and not analysis.get("technical_summary"):
             return {
                 "ticker": ticker,
                 "status": "error",
-                "error_message": f"Could not fetch data for '{ticker}'. This stock may not be listed on NSE or Yahoo Finance does not have data for it."
+                "error_message": f"Could not fetch data for '{ticker}'. This stock may not be listed on NSE."
             }
 
         return {

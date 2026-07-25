@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-login',
@@ -10,7 +11,7 @@ export class Login {
   loginWithZerodha() {
     // Call FastAPI to get Zerodha login URL
     // then redirect user to it
-    fetch('http://127.0.0.1:8000/auth/login')
+    fetch(`${environment.apiUrl}/auth/login`)
       .then((res) => res.json())
       .then((data) => {
         // Redirect browser to Zerodha login page
